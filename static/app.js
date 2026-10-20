@@ -33,7 +33,7 @@ function renderMessages(messages) {
       }
     }
   } else if(lastMessageSignature && !$('welcome')) {
-    const welcome=el('div','welcome');welcome.id='welcome';welcome.append(el('span','welcome-icon','✺'),el('h2','','从一句话开始。'),el('p','','告诉我一个小偏好，或者今天发生的事。'));area.replaceChildren(welcome);
+    const welcome=el('div','welcome');welcome.id='welcome';welcome.append(el('span','welcome-icon','✺'),el('h2','','先从称呼开始吧。'),el('p','','你希望我怎么称呼你？'));area.replaceChildren(welcome);
   }
   latestId=Math.max(latestId,...messages.map(m=>m.id),0);
   lastMessageSignature=signature;
@@ -75,6 +75,9 @@ async function refresh() {
   try {
     const next=await api('/api/state'),old=state;state=next;
     $('character-name').textContent=next.settings.name;
+    $('brand-name').textContent=next.settings.name==='绫濑沙季'?'沙季':next.settings.name;
+    const glyph=next.settings.name==='绫濑沙季'?'沙':Array.from(next.settings.name)[0];
+    $('brand-avatar').textContent=glyph;$('character-avatar').textContent=glyph;
     document.title=`${next.settings.name} · 记得每一次相遇`;
     $('model-status').textContent=next.model;
     $('mode-banner').hidden=next.mode!=='demo';
@@ -110,3 +113,5 @@ $('settings-form').addEventListener('submit',async e=>{e.preventDefault();try{aw
 $('notify').addEventListener('click',async()=>{if(!('Notification'in window))return toast('此浏览器不支持系统通知，聊天收件箱仍可正常使用');try{const permission=await Notification.requestPermission();toast(permission==='granted'?'通知已开启：网页在后台打开时可收到通知':'未开启通知，消息仍会保存在聊天收件箱');}catch{toast('浏览器未提供通知权限，消息仍会保存在聊天收件箱');}});
 $('clear-history').addEventListener('click',async()=>{if(!confirm('清空所有聊天记录？长期记忆、情绪和提醒会保留。'))return;try{await api('/api/history/clear',{});await refresh();toast('聊天记录已清空');}catch(err){toast(err.message);}});
 refresh();setInterval(refresh,2500);
+
+$('load-profile').addEventListener('click',async()=>{try{const result=await api('/api/profile/apply',{});fillSettings(result);await refresh();toast('沙季设定已载入；长期记忆和任务已保留');}catch(err){toast(err.message);}});
