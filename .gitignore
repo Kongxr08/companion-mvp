@@ -1,6 +1,14 @@
-.env
+.env*
+!.env.example
+.dev.vars*
 data/
 __pycache__/
 *.pyc
 *.log
 .venv/
+node_modules/
+.wrangler/
+.sites-runtime/
+.next/
+.vinext/
+dist/
