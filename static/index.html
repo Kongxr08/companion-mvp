@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>小满 · 记得每一次相遇</title><link rel="icon" href="data:,">
+  <link rel="stylesheet" href="/style.css"><script src="/app.js" defer></script>
+</head>
+<body>
+  <div class="app">
+    <aside class="rail">
+      <a class="brand" href="/" aria-label="返回聊天"><span class="brand-mark">满</span><span>小满<span class="brand-sub">YOUR EVERYDAY COMPANION</span></span></a>
+      <div class="rail-note"><span class="eyebrow">一处可以慢下来的地方</span><h1>今天，也想<br>听你说说。</h1><p>把日常留在这里，<br>让记忆慢慢长出来。</p></div>
+      <div class="plant" aria-hidden="true"><div class="stem"></div><i></i><i></i><i></i><i></i><div class="pot"></div></div>
+      <div class="rail-bottom"><span class="online-dot"></span> 本地保存 · 由你掌握<br><small>单用户 / 文字聊天 MVP</small></div>
+    </aside>
+    <main class="conversation">
+      <header class="chat-header"><div class="identity"><span class="avatar">满</span><div><h2 id="character-name">小满</h2><p id="model-status">正在连接本地服务…</p></div></div><button id="notify" class="subtle" type="button">开启桌面通知</button></header>
+      <div class="mood-strip"><span><span class="mood-orb"></span><b id="mood-label">平和</b></span><label>心情 <meter id="valence" min="0" max="1" value="0.6"></meter><span id="valence-text">60%</span></label><label>精力 <meter id="energy" min="0" max="1" value="0.65"></meter><span id="energy-text">65%</span></label><span class="mood-help" id="mood-reason" title="可解释的模拟情绪状态">模拟状态</span></div>
+      <div id="mode-banner" class="banner">演示模式：可以测试记忆、情绪和提醒；自由聊天需要连接模型。</div>
+      <div id="messages" class="messages" role="log" aria-label="聊天消息" aria-live="polite">
+        <div class="welcome" id="welcome"><span class="welcome-icon">✺</span><h2>从一句话开始。</h2><p>告诉我一个小偏好，或者今天发生的事。</p><div class="suggestions"><button data-prompt="我喜欢雨天，记住：我习惯晚上读书。">让她记住一个偏好</button><button data-prompt="我有点紧张，想找你聊聊。">聊聊现在的心情</button></div></div>
+      </div>
+      <div id="error" class="error" role="alert" hidden></div>
+      <form id="chat-form" class="composer"><label class="sr-only" for="message">发送给她的消息</label><textarea id="message" rows="2" maxlength="4000" placeholder="想说什么都可以…" required></textarea><div class="composer-bottom"><span id="composer-hint">Enter 发送 · Shift + Enter 换行</span><button id="send" class="primary" type="submit">发送 <span aria-hidden="true">↗</span></button></div></form>
+      <footer class="chat-footer">记忆与模拟情绪影响她的回应。主动消息需要本地后台程序持续运行。</footer>
+    </main>
+    <aside class="inspector">
+      <div class="inspector-heading"><span class="eyebrow">慢慢了解，慢慢熟悉</span><h2>我们的日常</h2></div>
+      <nav class="tabs" aria-label="伙伴管理"><button class="active" data-tab="memory" aria-selected="true">记忆 <span id="memory-count">0</span></button><button data-tab="tasks" aria-selected="false">提醒</button><button data-tab="settings" aria-selected="false">设定</button></nav>
+      <section id="panel-memory" class="panel"><p class="panel-intro">值得留下的事，会在这里生根。<br>你可以随时补充、修改或忘记。</p><form id="memory-form" class="small-form"><label class="sr-only" for="memory-content">添加一条记忆</label><input id="memory-content" maxlength="300" placeholder="手动添加一条记忆…" required><button type="submit" class="outline">添加</button></form><div id="memory-list" class="card-list"></div><p class="fine-print">修改或忘记时，会重置模型的短期上下文，避免旧信息被重新带回。第一版使用中文双字与关键词检索。</p></section>
+      <section id="panel-tasks" class="panel" hidden><p class="panel-intro">约好的事，我会再提起。<br>关掉网页后，消息也会留在收件箱。</p><form id="task-form" class="stack-form"><label for="task-title">提醒内容</label><input id="task-title" maxlength="200" placeholder="比如：休息一下，喝一杯水" required><label for="task-time">你的本地时间</label><input id="task-time" type="datetime-local" required><button type="submit" class="primary">安排提醒</button></form><button id="quick-reminder" class="outline full" type="button">20 秒后提醒我 · 验证后台投递</button><p class="fine-print">提醒使用表单安排，聊天中提到日期不会自动创建。暂停主动消息或处于免打扰时段时，提醒会延后投递。逾期提醒将在后台再次运行时补发。</p><div id="task-list" class="card-list"></div></section>
+      <section id="panel-settings" class="panel" hidden><form id="settings-form" class="stack-form"><label for="setting-name">她的名字</label><input id="setting-name" maxlength="40" required><label for="setting-persona">人格与说话方式</label><textarea id="setting-persona" rows="6" maxlength="3000" required></textarea><div class="setting-divider"></div><label class="toggle"><input id="setting-proactive" type="checkbox">允许主动消息与提醒</label><label class="toggle"><input id="setting-idle" type="checkbox">空闲时主动找我聊天</label><label for="setting-minutes">空闲多久后开口（分钟）</label><input id="setting-minutes" type="number" min="1" max="10080" required><label for="setting-limit">每天最多主动闲聊（条）</label><input id="setting-limit" type="number" min="1" max="20" required><div class="two-cols"><div><label for="quiet-start">免打扰开始</label><select id="quiet-start"></select></div><div><label for="quiet-end">免打扰结束</label><select id="quiet-end"></select></div></div><label for="setting-zone">免打扰时区（UTC 偏移小时）</label><input id="setting-zone" type="number" min="-12" max="14" required><p class="fine-print">开始与结束相同表示全天可投递。每日上限只限制主动闲聊，不限制你安排的提醒。空闲主动聊天默认关闭。</p><button class="primary" type="submit">保存设定</button></form><div class="data-tools"><a class="outline" href="/api/export" download>导出我的数据</a><button id="clear-history" class="text-button" type="button">清空聊天记录（保留记忆）</button></div><p class="fine-print">模型密钥只在服务器的 .env 配置。真实模式会把近期对话与相关记忆发送至你配置的模型服务商。</p></section>
+      <div class="inspector-footer" id="connection">● 正在连接</div>
+    </aside>
+  </div>
+  <div id="toast" class="toast" role="status" hidden></div>
+  <dialog id="edit-dialog"><form id="edit-form" class="stack-form"><h2>修改记忆</h2><p class="fine-print">用你确认后的信息替换这条记忆。</p><label class="sr-only" for="edit-content">记忆内容</label><textarea id="edit-content" rows="4" maxlength="300" required></textarea><div class="dialog-actions"><button id="edit-cancel" class="outline" type="button">取消</button><button class="primary" type="submit">保存修改</button></div></form></dialog>
+</body></html>
