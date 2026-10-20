@@ -12,7 +12,7 @@ from urllib.request import Request, urlopen
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from app import Engine, ModelError, Provider, LocalServer, make_handler
+from app import Engine, ModelError, Provider, LocalServer, make_handler, SAKI_PERSONA, LEGACY_PERSONA
 
 
 class Clock:
@@ -37,6 +37,65 @@ class EngineTests(unittest.TestCase):
         self.engine = Engine(self.path, FakeProvider(), self.clock)
     def tearDown(self):
         self.temp.cleanup()
+    def test_new_profile_does_not_seed_fictional_shared_memories(self):
+        state = self.engine.snapshot()
+        self.assertEqual(state['settings']['name'], '绫濑沙季')
+        self.assertEqual(state['memories'], [])
+        self.assertLessEqual(len(state['settings']['persona']), 3000)
+        reply = self.engine.chat('你好。', 'hello')['reply']
+        self.assertIn('绫濑沙季', reply)
+        self.assertNotIn('哥哥', reply)
+        self.assertEqual(self.engine.snapshot()['memories'], [])
+    def test_legacy_default_migrates_without_losing_data(self):
+        self.engine.chat('我喜欢猫。', 'a')
+        self.engine.add_task('喝水', self.clock.now + 60)
+        with self.engine.db() as con:
+            settings = self.engine.settings(con)
+            settings.update(name='小满', persona=LEGACY_PERSONA, daily_limit=7)
+            self.engine.put(con, 'settings', settings)
+        restored = Engine(self.path, FakeProvider(), self.clock)
+        state = restored.snapshot()
+        self.assertEqual(state['settings']['name'], '绫濑沙季')
+        self.assertEqual(state['settings']['daily_limit'], 7)
+        self.assertEqual(len(state['memories']), 1)
+        self.assertEqual(len(state['messages']), 2)
+        self.assertEqual(len(state['tasks']), 1)
+        with restored.db() as con:
+            self.assertEqual(restored.get(con, 'context_floor'), 2)
+    def test_custom_persona_is_not_silently_overwritten(self):
+        self.engine.save_settings({'name':'我的伙伴','persona':'用简洁的中文交流。'})
+        state = Engine(self.path, FakeProvider(), self.clock).snapshot()
+        self.assertEqual(state['settings']['name'], '我的伙伴')
+        self.assertEqual(state['settings']['persona'], '用简洁的中文交流。')
+    def test_explicit_profile_apply_keeps_memories_mood_and_tasks(self):
+        self.engine.chat('我喜欢雨天，谢谢。', 'a')
+        self.engine.add_task('喝水', self.clock.now + 60)
+        self.engine.save_settings({'name':'自定义','persona':'自定义角色','idle_minutes':15})
+        before = self.engine.snapshot()
+        self.engine.apply_profile()
+        after = self.engine.snapshot()
+        self.assertEqual(after['settings']['persona'], SAKI_PERSONA)
+        self.assertEqual(after['settings']['idle_minutes'], 15)
+        for key in ('messages','memories','mood','tasks'):
+            self.assertEqual(before[key], after[key])
+    def test_schedule_settings_do_not_reset_short_term_context(self):
+        self.engine.chat('你好。', 'a')
+        self.engine.save_settings({'name':'绫濑沙季','persona':SAKI_PERSONA,'idle_minutes':45})
+        with self.engine.db() as con:
+            self.assertEqual(self.engine.get(con, 'context_floor', 0), 0)
+    def test_persona_used_for_normal_and_proactive_model_calls(self):
+        self.engine.provider.demo = False
+        captured = []
+        def complete(system, messages):
+            captured.append(system)
+            return json.dumps({'reply':'嗯，慢慢说。','memories':[]}) if len(captured) == 1 else '今天有什么想说的吗？'
+        self.engine.provider.complete = complete
+        self.engine.chat('你好。', 'a')
+        self.engine.save_settings({'idle_enabled':True, 'idle_minutes':1})
+        self.clock.now += 61
+        self.engine.tick()
+        self.assertEqual(len(captured), 2)
+        self.assertTrue(all(SAKI_PERSONA in system for system in captured))
     def test_memory_and_emotion_survive_restart(self):
         self.engine.chat('我喜欢雨天，谢谢你。', 'one')
         old = self.engine.snapshot()
@@ -208,6 +267,12 @@ class HTTPTests(unittest.TestCase):
             self.assertIn('记下', json.load(result)['reply'])
         with urlopen(self.base+'/api/state') as result:
             self.assertEqual(len(json.load(result)['memories']), 1)
+    def test_profile_apply_endpoint_preserves_saved_memory(self):
+        self.engine.chat('我喜欢猫。', 'a')
+        request = Request(self.base+'/api/profile/apply', b'{}', {'Content-Type':'application/json','Origin':self.base})
+        with urlopen(request) as result:
+            self.assertEqual(json.load(result)['name'], '绫濑沙季')
+        self.assertEqual(len(self.engine.snapshot()['memories']), 1)
     def test_cross_origin_write_rejected(self):
         request = Request(self.base+'/api/history/clear', b'{}', {'Content-Type':'application/json','Origin':'https://attacker.example'})
         with self.assertRaises(HTTPError) as exc:
